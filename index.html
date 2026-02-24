@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书广告数据映射工具 v2.7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #ff2442;
+    --primary-light: #fff0f2;
+    --primary-dark: #cc1a33;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+  }
+  /* ===== HEADER ===== */
+  .header {
+    background: linear-gradient(135deg, #ff2442 0%, #ff6b81 100%);
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-md);
+  }
+  .header-logo {
+    width: 44px; height: 44px;
+    background: white;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  .header-title { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  .header-sub { font-size: 13px; opacity: .85; margin-top: 2px; }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1600px; margin: 0 auto; padding: 24px 32px; }
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 24px;
+    align-items: start;
+  }
+  /* ===== CARD ===== */
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-header-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .card-header-icon.red { background: var(--primary-light); }
+  .card-header-icon.blue { background: #eff6ff; }
+  .card-header-icon.green { background: #f0fdf4; }
+  .card-header-icon.yellow { background: #fffbeb; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--gray-800); }
+  .card-subtitle { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+  .card-body { padding: 20px; }
+  /* ===== UPLOAD AREA ===== */
+  .upload-area {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--gray-50);
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  .upload-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-text { font-size: 15px; font-weight: 600; color: var(--gray-700); }
+  .upload-hint { font-size: 13px; color: var(--gray-400); margin-top: 6px; }
+  .upload-file-info {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    margin-top: 12px;
+  }
+  .upload-file-info.show { display: flex; }
+  .file-icon { font-size: 24px; }
+  .file-name { font-size: 14px; font-weight: 600; color: var(--gray-700); }
+  .file-size { font-size: 12px; color: var(--gray-500); }
+  /* ===== TYPE SELECTOR ===== */
+  .type-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .type-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-600);
+  }
+  .type-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .type-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .type-btn .type-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .type-btn .type-label { font-size: 13px; }
+  .type-btn .type-desc { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .type-btn.active .type-desc { color: var(--primary); opacity: .7; }
+  /* ===== BUTTON ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all .2s;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-primary:disabled { background: var(--gray-300); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+  }
+  .btn-secondary:hover { background: var(--gray-200); }
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+  .btn-success:hover { background: #16a34a; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-success:disabled { background: var(--gray-300); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-lg { padding: 12px 28px; font-size: 15px; }
+  .btn-full { width: 100%; justify-content: center; }
+  /* ===== PROGRESS ===== */
+  .progress-wrap { margin: 16px 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--gray-600); margin-bottom: 6px; }
+  .progress-bar {
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #ff6b81);
+    border-radius: 99px;
+    transition: width .3s ease;
+    width: 0%;
+  }
+  /* ===== LOG ===== */
+  .log-container {
+    background: #0f172a;
+    border-radius: var(--radius);
+    padding: 16px;
+    height: 520px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .log-container::-webkit-scrollbar { width: 6px; }
+  .log-container::-webkit-scrollbar-track { background: transparent; }
+  .log-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  .log-entry { display: flex; gap: 10px; }
+  .log-time { color: #64748b; flex-shrink: 0; }
+  .log-msg { flex: 1; }
+  .log-info .log-msg { color: #94a3b8; }
+  .log-success .log-msg { color: #4ade80; }
+  .log-warning .log-msg { color: #fbbf24; }
+  .log-error .log-msg { color: #f87171; }
+  .log-highlight .log-msg { color: #60a5fa; font-weight: 600; }
+  .log-section .log-msg { color: #c084fc; font-weight: 700; }
+  /* ===== STATS ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-item {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    text-align: center;
+  }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--gray-800); }
+  .stat-label { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .stat-item.success { border-color: #bbf7d0; background: #f0fdf4; }
+  .stat-item.success .stat-value { color: var(--success); }
+  .stat-item.warning { border-color: #fde68a; background: #fffbeb; }
+  .stat-item.warning .stat-value { color: var(--warning); }
+  .stat-item.info { border-color: #bfdbfe; background: #eff6ff; }
+  .stat-item.info .stat-value { color: var(--info); }
+  .stat-item.danger { border-color: #fecaca; background: #fef2f2; }
+  .stat-item.danger .stat-value { color: var(--danger); }
+  /* ===== MAPPING TABLE ===== */
+  .mapping-table-wrap {
+    overflow-x: auto;
+    max-height: 780px;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+  }
+  .mapping-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .mapping-table-wrap::-webkit-scrollbar-track { background: var(--gray-100); }
+  .mapping-table-wrap::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+  .mapping-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .mapping-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--gray-800);
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .mapping-table thead th:first-child { border-radius: 0; }
+  .mapping-table tbody tr:hover { background: var(--gray-50); }
+  .mapping-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .mapping-table tbody tr:last-child td { border-bottom: none; }
+  .col-num {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-family: monospace;
+    white-space: nowrap;
+  }
+  .field-name {
+    font-weight: 500;
+    color: var(--gray-800);
+  }
+  .src-path {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .src-path .r1 { color: var(--info); }
+  .src-path .r2 { color: #8b5cf6; }
+  .src-path .r3 { color: var(--gray-700); font-weight: 500; }
+  .src-path .sep { color: var(--gray-300); margin: 0 3px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-success { background: #dcfce7; color: #16a34a; }
+  .badge-warning { background: #fef9c3; color: #a16207; }
+  .badge-danger { background: #fee2e2; color: #dc2626; }
+  .badge-info { background: #dbeafe; color: #1d4ed8; }
+  .badge-gray { background: var(--gray-100); color: var(--gray-500); }
+  /* ===== FILTER BAR ===== */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+  }
+  .filter-bar input[type=text] {
+    flex: 1;
+    min-width: 200px;
+    padding: 7px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 13px;
+    outline: none;
+    background: white;
+  }
+  .filter-bar input[type=text]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,36,66,.1); }
+  .filter-select {
+    padding: 7px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 13px;
+    outline: none;
+    background: white;
+    cursor: pointer;
+  }
+  .filter-select:focus { border-color: var(--primary); }
+  .filter-count { font-size: 12px; color: var(--gray-500); white-space: nowrap; }
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0 20px;
+    background: white;
+  }
+  .tab-btn {
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--gray-500);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .2s;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tab-count {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-radius: 99px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tab-btn.active .tab-count { background: var(--primary-light); color: var(--primary); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* ===== RESULT SECTION ===== */
+  .result-section {
+    display: none;
+    margin-top: 16px;
+  }
+  .result-section.show { display: block; }
+  .result-download {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+  }
+  .result-download-icon { font-size: 32px; }
+  .result-download-info .title { font-size: 15px; font-weight: 600; color: var(--gray-800); }
+  .result-download-info .desc { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  /* ===== ALERT ===== */
+  .alert {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  /* ===== STEP INDICATOR ===== */
+  .steps {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 20px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    color: var(--gray-500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all .3s;
+  }
+  .step.active .step-num { background: var(--primary); color: white; }
+  .step.done .step-num { background: var(--success); color: white; }
+  .step-label { font-size: 12px; color: var(--gray-500); font-weight: 500; text-align: center; }
+  .step.active .step-label { color: var(--primary); font-weight: 600; }
+  .step.done .step-label { color: var(--success); }
+  .step-line { flex: 1; height: 2px; background: var(--gray-200); margin: 14px 4px 0; align-self: flex-start; }
+  .step.done + .step .step-line, .step.done .step-line { background: var(--success); }
+  /* ===== VERIFY TABLE ===== */
+  .verify-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .verify-table th {
+    background: var(--gray-100);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-600);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .verify-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .verify-table tr:last-child td { border-bottom: none; }
+  .verify-table tr.error-row { background: #fef2f2; }
+  .verify-table tr.ok-row { background: #f0fdf4; }
+  /* ===== MISC ===== */
+  .divider { height: 1px; background: var(--gray-200); margin: 16px 0; }
+  .text-muted { color: var(--gray-500); font-size: 13px; }
+  .text-center { text-align: center; }
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .justify-between { justify-content: space-between; }
+  .right-panel { display: flex; flex-direction: column; gap: 24px; }
+  .sticky-panel { position: sticky; top: 24px; }
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1200px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .sticky-panel { position: static; }
+  }
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .header { padding: 16px; }
+  }
+  /* ===== LOADING SPINNER ===== */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .processing-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .processing-overlay.show { display: flex; }
+  .processing-box {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 40px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    min-width: 280px;
+  }
+  .processing-spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--gray-200);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  .processing-title { font-size: 16px; font-weight: 600; color: var(--gray-800); }
+  .processing-desc { font-size: 13px; color: var(--gray-500); margin-top: 6px; }
+  /* ===== EDITABLE MAPPING ===== */
+  .editable-cell {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 13px;
+    width: 100%;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .editable-cell:hover { border-color: var(--gray-300); background: white; }
+  .editable-cell:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 2px rgba(255,36,66,.1); }
+  .row-actions { display: flex; gap: 4px; }
+  .row-action-btn {
+    padding: 3px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--gray-500);
+    transition: all .15s;
+  }
+  .row-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .row-action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  /* ===== TOOLTIP ===== */
+  [data-tooltip] { position: relative; cursor: help; }
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gray-800);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+    margin-bottom: 4px;
+    z-index: 100;
+  }
+  [data-tooltip]:hover::after { opacity: 1; }
+
+/* Changelog Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 560px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  position: relative;
+}
+.modal-box h2 { font-size: 17px; font-weight: 700; color: var(--gray-800); margin-bottom: 20px; }
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400);
+}
+.modal-close:hover { color: var(--gray-700); }
+.changelog-version {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 6px;
+}
+.changelog-version .ver-tag {
+  background: var(--primary); color: #fff;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+}
+.changelog-version .ver-date { font-size: 12px; color: var(--gray-400); }
+.changelog-block { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-100); }
+.changelog-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.changelog-block ul { margin: 0; padding-left: 18px; }
+.changelog-block ul li { font-size: 13px; color: var(--gray-600); line-height: 1.8; }
+
+  /* ===== FOOTER ===== */
+  .site-footer {
+    margin-top: 48px;
+    padding: 24px 0 32px;
+    border-top: 1px solid var(--gray-200);
+    text-align: center;
+  }
+  .footer-back-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all .2s;
+    margin-bottom: 16px;
+    text-decoration: none;
+  }
+  .footer-back-top:hover {
+    background: var(--gray-200);
+    color: var(--gray-700);
+    transform: translateY(-1px);
+  }
+  .footer-copyright {
+    font-size: 12px;
+    color: var(--gray-400);
+    line-height: 1.8;
+  }
+  .footer-brand {
+    font-weight: 600;
+    color: var(--gray-500);
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+<!-- Changelog Modal -->
+<div class="modal-overlay" id="changelogModal" onclick="closeChangelog(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('changelogModal').classList.remove('open')">✕</button>
+    <h2>🌸 更新日志</h2>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.7</span>
+        <span class="ver-date">2026-02-25</span>
+      </div>
+      <ul>
+        <li>彻底修复日期偶差 1 天的问题：改用纯数学算法（serialToYMD）从 Excel 序列号直接计算年月日，完全不依赖 new Date() 或本地时区，在任何时区下均正确</li>
+        <li>CSV 数据源先转换为 xlsx 内部格式再统一处理，确保字段与数据格式不变，大幅降低 CSV 适配复杂度</li>
+        <li>聚光日期验证逻辑修复：先检测时间段（含 ~/至/to 则拒绝），再尝试提取年月日，支持序列号及各种字符串日期格式</li>
+        <li>验证阶段改为使用原始数据副本与输出结果对比：日期字段双方统一转为 YYYY-MM-DD 再比较，非日期字段直接比对字符串值</li>
+        <li>UI：三个选项卡内容区高度统一，新增页面底部版权声明与回到顶部按鈕</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.6</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>修复：Excel 日期序列号在 UTC+8 时区下偏差 1 天的问题（改用本地时间方法解析）</li>
+        <li>UI：三个选项卡（字段映射表 / 执行日志 / 数据验证）内容区高度统一为 520px</li>
+        <li>UI：数据源独有字段卡片设置最大高度 340px，超出时卡片内部滚动查看</li>
+        <li>UI：页面底部新增版权声明页脚（Pando Forest 内部专用 · 潘多森林（深圳）传媒有限公司）</li>
+        <li>UI：新增"回到顶部"按钮，位于版权声明上方</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.5</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>修复：切换数据类型后下载按钮仍输出旧类型表头的问题</li>
+        <li>下载结果在匹配完成时即时冻结，后续任何操作不再影响输出内容</li>
+        <li>修复：聚光广告模式下"数据源独有字段"卡片被隐藏的问题</li>
+        <li>独有字段卡片始终显示，字段数为 0 时显示空状态提示</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.4</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>修复日期识别逻辑：支持带小数的 Excel 序列号（如 46060.00048611111）</li>
+        <li>日期识别改为广谱匹配：只要能提取年月日即视为合法，统一输出 YYYY-MM-DD</li>
+        <li>新增带时间的日期字符串支持（如 2026-02-07 00:07:00）</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.3</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>版本号徽章可点击，弹出完整更新日志</li>
+        <li>处理进度卡片新增数据源字段数、匹配行数等动态统计项</li>
+        <li>字段映射表删除"数据源列"冗余列，列宽改为自适应</li>
+        <li>聚光广告模式下映射表正确显示数据源字段名</li>
+        <li>使用说明更新为通用版本，删除无关提示</li>
+        <li>数据源独有字段移出映射表，独立成卡片放在使用说明下方</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.2</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>规范输出文件格式统一为 .xlsx</li>
+        <li>文件名改为 <code>匹配成功_蒲公英/聚光广告_时间戳.xlsx</code></li>
+        <li>Excel 工作表名称随数据类型动态切换</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.1</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>聚光广告匹配前新增单日日期验证：检测到时间段格式则终止并提示</li>
+        <li>修复日期列输出为 Excel 序列号（如 46060）的问题，统一输出为 YYYY-MM-DD</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v2.0</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>新增聚光广告数据映射（76 列字段，100% 命中）</li>
+        <li>支持 CSV 格式数据源上传</li>
+        <li>聚光广告按钮正式激活（原为灰化"即将支持"）</li>
+      </ul>
+    </div>
+    <div class="changelog-block">
+      <div class="changelog-version">
+        <span class="ver-tag">v1.2</span>
+        <span class="ver-date">2026-02-24</span>
+      </div>
+      <ul>
+        <li>蒲公英数据映射正式版（164 列，159 已映射，5 留白）</li>
+        <li>去除 tplCol 硬编码序号，改为自动按数组顺序推断列号</li>
+        <li>修复 SheetJS 内嵌导致文本编辑器乱码问题，改为 CDN 引用</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Overlay -->
+<div class="processing-overlay" id="processingOverlay">
+  <div class="processing-box">
+    <div class="processing-spinner"></div>
+    <div class="processing-title" id="processingTitle">正在处理中...</div>
+    <div class="processing-desc" id="processingDesc">请稍候</div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">🌸</div>
+  <div>
+    <div class="header-title">小红书广告数据映射工具</div>
+    <div class="header-sub">将蒲公英/聚光数据源自动匹配填充到上传模板</div>
+  </div>
+  <div class="header-badge" id="versionBadge" onclick="showChangelog()" title="点击查看更新日志" style="cursor:pointer;">v2.7</div>
+</div>
+
+<div class="container">
+  <div class="main-grid">
+    <!-- LEFT: Main Content -->
+    <div>
+      <!-- Step 1: Upload & Config -->
+      <div class="card" id="step1Card">
+        <div class="card-header">
+          <div class="card-header-icon red">📤</div>
+          <div>
+            <div class="card-title">第一步：上传数据源 & 选择类型</div>
+            <div class="card-subtitle">支持小红书蒲公英导出的 .xlsx / .xls 格式</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Type Selector -->
+          <div class="type-selector">
+            <div class="type-btn active" id="typeBtn_pugongying" onclick="selectType('pugongying')">
+              <span class="type-icon">🌼</span>
+              <span class="type-label">蒲公英数据</span>
+              <span class="type-desc">博主合作投放数据</span>
+            </div>
+            <div class="type-btn" id="typeBtn_juguang" onclick="selectType('juguang')">
+              <span class="type-icon">💡</span>
+              <span class="type-label">聚光广告数据</span>
+              <span class="type-desc">聚光广告投放数据</span>
+            </div>
+          </div>
+
+          <!-- Upload Area -->
+          <div class="upload-area" id="uploadArea" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
+            <div class="upload-icon">📊</div>
+            <div class="upload-text">点击选择文件 或 拖拽文件到此处</div>
+            <div class="upload-hint" id="uploadHint">支持 .xlsx / .xls 格式 · 小红书蒲公英导出数据</div>
+          </div>
+
+          <!-- File Info -->
+          <div class="upload-file-info" id="fileInfo">
+            <div class="file-icon">📗</div>
+            <div>
+              <div class="file-name" id="fileName">-</div>
+              <div class="file-size" id="fileSize">-</div>
+            </div>
+            <button class="btn btn-secondary" style="margin-left:auto;" onclick="clearFile()">✕ 重新选择</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-8">
+            <button class="btn btn-primary btn-lg" id="startBtn" onclick="startMapping()" disabled>
+              <span>🚀</span> 开始映射匹配
+            </button>
+            <button class="btn btn-secondary" onclick="showTab('mapping')" id="viewMappingBtn">
+              <span>🗂️</span> 查看字段映射表
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="card mt-16" id="mainTabs">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="showTab('mapping')" id="tabBtn_mapping">
+            🗂️ 字段映射表
+            <span class="tab-count" id="tabCount_mapping">164</span>
+          </button>
+          <button class="tab-btn" onclick="showTab('log')" id="tabBtn_log">
+            📋 执行日志
+            <span class="tab-count" id="tabCount_log">0</span>
+          </button>
+          <button class="tab-btn" onclick="showTab('verify')" id="tabBtn_verify">
+            ✅ 数据验证
+            <span class="tab-count" id="tabCount_verify">0</span>
+          </button>
+        </div>
+
+        <!-- Tab: Mapping Table -->
+        <div class="tab-panel active" id="panel_mapping">
+          <div class="filter-bar">
+            <input type="text" id="filterInput" placeholder="🔍 搜索字段名称..." oninput="filterTable()">
+            <select class="filter-select" id="filterStatus" onchange="filterTable()">
+              <option value="">全部状态</option>
+              <option value="mapped">✅ 已映射</option>
+              <option value="blank">⬜ 留白</option>
+              <option value="src_only">📌 仅数据源有</option>
+            </select>
+            <select class="filter-select" id="filterGroup" onchange="filterTable()">
+              <option value="">全部分组</option>
+            </select>
+            <span class="filter-count" id="filterCount">显示 164 / 164 条</span>
+          </div>
+          <div class="mapping-table-wrap">
+            <table class="mapping-table" id="mappingTable">
+              <thead>
+                <tr>
+                  <th style="width:44px">#</th>
+                  <th style="width:56px">模板列</th>
+                  <th style="min-width:100px">模板字段名</th>
+                  <th id="thSrcPath" style="min-width:180px">数据源路径（第1级 › 第2级 › 第3级）</th>
+                  <th style="width:90px">状态</th>
+                  <th style="width:100px">备注</th>
+                </tr>
+              </thead>
+              <tbody id="mappingTableBody">
+                <!-- 由JS动态生成 -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- Tab: Log -->
+        <div class="tab-panel" id="panel_log">
+          <div style="padding:16px;">
+            <div class="flex justify-between items-center" style="margin-bottom:12px;">
+              <span class="text-muted">实时执行日志 · 记录映射匹配全过程</span>
+              <button class="btn btn-secondary" onclick="clearLog()" style="padding:6px 12px; font-size:12px;">🗑️ 清空日志</button>
+            </div>
+            <div class="log-container" id="logContainer">
+              <div class="log-entry log-info">
+                <span class="log-time">[等待]</span>
+                <span class="log-msg">系统就绪，等待上传数据源文件...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Verify -->
+        <div class="tab-panel" id="panel_verify">
+          <div style="padding:16px; height:520px; overflow-y:auto; box-sizing:border-box;" id="verifyContent">
+            <div class="alert alert-info">
+              <span class="alert-icon">ℹ️</span>
+              <span>请先完成映射匹配，验证结果将在此处显示。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Control Panel -->
+    <div class="right-panel sticky-panel">
+      <!-- Progress & Stats -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon green">📊</div>
+          <div>
+            <div class="card-title">处理进度</div>
+            <div class="card-subtitle">实时映射状态</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Steps -->
+          <div class="steps">
+            <div class="step active" id="step1">
+              <div class="step-num">1</div>
+              <div class="step-label">上传</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" id="step2">
+              <div class="step-num">2</div>
+              <div class="step-label">解析</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" id="step3">
+              <div class="step-num">3</div>
+              <div class="step-label">映射</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" id="step4">
+              <div class="step-num">4</div>
+              <div class="step-label">验证</div>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span id="progressLabel">等待开始</span>
+              <span id="progressPct">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="statSrcFields">-</div>
+              <div class="stat-label">数据源字段数</div>
+            </div>
+            <div class="stat-item success">
+              <div class="stat-value" id="statMapped">-</div>
+              <div class="stat-label">已映射字段</div>
+            </div>
+            <div class="stat-item info">
+              <div class="stat-value" id="statBlank">-</div>
+              <div class="stat-label">留白字段</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="statTotal">-</div>
+              <div class="stat-label">匹配行数</div>
+            </div>
+            <div class="stat-item" id="statErrorItem">
+              <div class="stat-value" id="statErrors">-</div>
+              <div class="stat-label">验证错误</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download Result -->
+      <div class="card" id="downloadCard" style="display:none;">
+        <div class="card-header">
+          <div class="card-header-icon green">✅</div>
+          <div>
+            <div class="card-title">匹配完成</div>
+            <div class="card-subtitle">点击下载填充好的模板文件</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="result-download">
+            <div class="result-download-icon">📥</div>
+            <div class="result-download-info">
+              <div class="title" id="downloadFileName">已匹配模板.xlsx</div>
+              <div class="desc" id="downloadFileDesc">-</div>
+            </div>
+          </div>
+          <button class="btn btn-success btn-full mt-12" onclick="downloadResult()">
+            ⬇️ 下载匹配结果 Excel
+          </button>
+          <button class="btn btn-secondary btn-full mt-8" onclick="resetAll()">
+            🔄 重新开始
+          </button>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon yellow">💡</div>
+          <div>
+            <div class="card-title">使用说明</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="font-size:13px; color:var(--gray-600); line-height:1.8;">
+            <p><strong>① 选择数据类型</strong>：选择与数据源对应的类型（蒲公英 / 聚光广告）</p>
+            <p style="margin-top:8px;"><strong>② 上传数据源</strong>：点击上传区或拖拽文件，支持 .xlsx / .xls / .csv</p>
+            <p style="margin-top:8px;"><strong>③ 开始映射</strong>：点击"开始映射匹配"，系统自动完成解析与字段匹配</p>
+            <p style="margin-top:8px;"><strong>④ 查看日志</strong>：切换至"执行日志"标签页，可查看每步详细过程与异常信息</p>
+            <p style="margin-top:8px;"><strong>⑤ 下载结果</strong>：匹配完成后点击下载，获得填充好的 Excel 模板文件</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source-only fields card -->
+      <div class="card" id="srcOnlyCard">
+        <div class="card-header">
+          <div class="card-header-icon" style="background:var(--info-light);color:var(--info);">📌</div>
+          <div>
+            <div class="card-title">数据源独有字段</div>
+            <div class="card-subtitle" id="srcOnlySubtitle">仅存在于数据源中，不填充到模板</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="srcOnlyFields" style="font-size:12px; color:#4b5563; line-height:1.8; max-height:340px; overflow-y:auto; padding-right:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 字段映射配置表（蒲公英数据）
+// 格式：{ tplCol, tplName, srcR1, srcR2, srcR3, status, note }
+// status: 'mapped' | 'blank' | 'not_found'
+// 可在此处手动增删改映射关系
+// ⚠️  无需填写列序号：系统自动按数组顺序（第1条=模板第1列）推断列号
+//    插入或删除条目后，后续列号自动重新计算，无需手动修改任何序号
+// ============================================================
+const MAPPING_CONFIG = {
+  pugongying: [
+    // ── 基础信息 ──────────────────────────────────────────────
+    { tplName:'数据更新日期',    srcR1:'数据更新日期',              srcR2:'数据更新日期',              srcR3:'数据更新日期',    status:'mapped', note:'' },
+    { tplName:'博主昵称',        srcR1:'博主基础信息',              srcR2:'博主基础信息',              srcR3:'博主昵称',        status:'mapped', note:'' },
+    { tplName:'笔记标题',        srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记标题',        status:'mapped', note:'' },
+    { tplName:'笔记链接',        srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记链接',        status:'mapped', note:'' },
+    { tplName:'笔记类型',        srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记类型',        status:'mapped', note:'' },
+    { tplName:'笔记发布日期',    srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记发布日期',    status:'mapped', note:'' },
+    { tplName:'博主主页链接',    srcR1:'博主基础信息',              srcR2:'博主基础信息',              srcR3:'博主主页链接',    status:'mapped', note:'' },
+    { tplName:'博主粉丝量',      srcR1:'博主基础信息',              srcR2:'博主基础信息',              srcR3:'博主粉丝量',      status:'mapped', note:'' },
+    { tplName:'博主健康等级',    srcR1:'博主基础信息',              srcR2:'博主基础信息',              srcR3:'博主健康等级',    status:'mapped', note:'' },
+    { tplName:'笔记ID',          srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记id',          status:'mapped', note:'' },
+    { tplName:'笔记来源',        srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'笔记来源',        status:'mapped', note:'' },
+    { tplName:'内容标签',        srcR1:'笔记基础信息',              srcR2:'笔记基础信息',              srcR3:'内容标签',        status:'mapped', note:'' },
+    { tplName:'订单ID',          srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'订单id',          status:'mapped', note:'' },
+    { tplName:'SPU名称',         srcR1:'SPU信息',                   srcR2:'SPU信息',                   srcR3:'spu名称',         status:'mapped', note:'' },
+    { tplName:'合作名称',        srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'合作名称',        status:'mapped', note:'' },
+    { tplName:'报备品牌',        srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'报备品牌',        status:'mapped', note:'' },
+    { tplName:'博主报价',        srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'博主报价',        status:'mapped', note:'' },
+    { tplName:'服务费金额',      srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'服务费金额',      status:'mapped', note:'' },
+    { tplName:'是否为优效模式',  srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'是否为优效模式',  status:'mapped', note:'' },
+    { tplName:'下单账号',        srcR1:'订单基础信息',              srcR2:'订单基础信息',              srcR3:'下单账号',        status:'mapped', note:'' },
+    // ── 流量效果 ──────────────────────────────────────────────
+    { tplName:'曝光量',          srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'曝光量',          status:'mapped', note:'' },
+    { tplName:'阅读量',          srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'阅读量',          status:'mapped', note:'' },
+    { tplName:'CTR',             srcR1:'',                          srcR2:'',                          srcR3:'',                status:'blank',  note:'公式计算字段，留白' },
+    { tplName:'CPM',             srcR1:'',                          srcR2:'',                          srcR3:'',                status:'blank',  note:'公式计算字段，留白' },
+    { tplName:'CPC',             srcR1:'',                          srcR2:'',                          srcR3:'',                status:'blank',  note:'公式计算字段，留白' },
+    { tplName:'阅读UV',          srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'阅读UV',          status:'mapped', note:'' },
+    { tplName:'人均阅读频次',    srcR1:'',                          srcR2:'',                          srcR3:'',                status:'blank',  note:'公式计算字段，留白' },
+    { tplName:'平均浏览时长',    srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'平均浏览时长',    status:'mapped', note:'' },
+    { tplName:'图文3s阅读率',    srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'3s阅读率',        status:'mapped', note:'数据源字段名为"3s阅读率"' },
+    { tplName:'视频5s播放率',    srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'5s播放率',        status:'mapped', note:'数据源字段名为"5s播放率"' },
+    { tplName:'视频总时长',      srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'视频总时长',      status:'mapped', note:'' },
+    { tplName:'视频完播率',      srcR1:'全部流量效果',              srcR2:'全部流量效果',              srcR3:'视频完播率',      status:'mapped', note:'' },
+    // ── 互动效果 ──────────────────────────────────────────────
+    { tplName:'互动量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'互动量',          status:'mapped', note:'' },
+    { tplName:'互动率',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'互动率',          status:'mapped', note:'' },
+    { tplName:'CPE',             srcR1:'',                          srcR2:'',                          srcR3:'',                status:'blank',  note:'公式计算字段，留白' },
+    { tplName:'点赞量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'点赞量',          status:'mapped', note:'' },
+    { tplName:'收藏量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'收藏量',          status:'mapped', note:'' },
+    { tplName:'评论量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'评论量',          status:'mapped', note:'' },
+    { tplName:'分享量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'分享量',          status:'mapped', note:'' },
+    { tplName:'关注量',          srcR1:'全部互动效果',              srcR2:'全部互动效果',              srcR3:'关注量',          status:'mapped', note:'' },
+    // ── 分流量效果 ──────────────────────────────────────────────
+    { tplName:'自然曝光量',      srcR1:'自然流量效果',              srcR2:'自然流量效果',              srcR3:'自然曝光量',      status:'mapped', note:'' },
+    { tplName:'自然阅读量',      srcR1:'自然流量效果',              srcR2:'自然流量效果',              srcR3:'自然阅读量',      status:'mapped', note:'' },
+    { tplName:'推广曝光量',      srcR1:'推广流量效果',              srcR2:'推广流量效果',              srcR3:'推广曝光量',      status:'mapped', note:'' },
+    { tplName:'推广阅读量',      srcR1:'推广流量效果',              srcR2:'推广流量效果',              srcR3:'推广阅读量',      status:'mapped', note:'' },
+    { tplName:'加热曝光量',      srcR1:'加热流量效果',              srcR2:'加热流量效果',              srcR3:'加热曝光量',      status:'mapped', note:'' },
+    { tplName:'加热阅读量',      srcR1:'加热流量效果',              srcR2:'加热流量效果',              srcR3:'加热阅读量',      status:'mapped', note:'' },
+    // ── 曝光来源分布（IM=Impression） ──────────────────────────
+    { tplName:'发现页IM',        srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'发现页', status:'mapped', note:'自然曝光来源-发现页占比' },
+    { tplName:'搜索页IM',        srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'搜索页', status:'mapped', note:'自然曝光来源-搜索页占比' },
+    { tplName:'个人页IM',        srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'个人页', status:'mapped', note:'自然曝光来源-个人页占比' },
+    { tplName:'关注页IM',        srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'关注页', status:'mapped', note:'自然曝光来源-关注页占比' },
+    { tplName:'附近页IM',        srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'附近页', status:'mapped', note:'自然曝光来源-附近页占比' },
+    { tplName:'其他IM',          srcR1:'曝光来源分布占比（自然流量）', srcR2:'曝光来源分布占比（自然流量）', srcR3:'其他',   status:'mapped', note:'自然曝光来源-其他占比' },
+    // ── 阅读来源分布（V=View） ──────────────────────────────────
+    { tplName:'发现页V',         srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'发现页', status:'mapped', note:'自然阅读来源-发现页占比' },
+    { tplName:'搜索页V',         srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'搜索页', status:'mapped', note:'自然阅读来源-搜索页占比' },
+    { tplName:'个人页V',         srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'个人页', status:'mapped', note:'自然阅读来源-个人页占比' },
+    { tplName:'关注页V',         srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'关注页', status:'mapped', note:'自然阅读来源-关注页占比' },
+    { tplName:'附近页V',         srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'附近页', status:'mapped', note:'自然阅读来源-附近页占比' },
+    { tplName:'其他V',           srcR1:'阅读来源分布占比（自然流量）', srcR2:'阅读来源分布占比（自然流量）', srcR3:'其他',   status:'mapped', note:'自然阅读来源-其他占比' },
+    // ── 性价比 ──────────────────────────────────────────────────
+    { tplName:'阅读单价',        srcR1:'性价比情况',                srcR2:'性价比情况',                srcR3:'阅读单价',        status:'mapped', note:'' },
+    { tplName:'互动单价',        srcR1:'性价比情况',                srcR2:'性价比情况',                srcR3:'互动单价',        status:'mapped', note:'' },
+    // ── 组件效果 ──────────────────────────────────────────────
+    { tplName:'正文组件类型',    srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件类型',    status:'mapped', note:'' },
+    { tplName:'正文组件文案',    srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件文案',    status:'mapped', note:'' },
+    { tplName:'正文组件曝光量',  srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件曝光量',  status:'mapped', note:'' },
+    { tplName:'正文组件点击量',  srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件点击量',  status:'mapped', note:'' },
+    { tplName:'正文组件点击人数',srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件点击人数',status:'mapped', note:'' },
+    { tplName:'正文组件CTR',     srcR1:'组件效果数据',              srcR2:'正文组件',                  srcR3:'正文组件CTR',     status:'mapped', note:'' },
+    { tplName:'笔记底栏组件类型',srcR1:'组件效果数据',              srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件类型',status:'mapped', note:'' },
+    { tplName:'笔记底栏组件文案',srcR1:'组件效果数据',              srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件文案',status:'mapped', note:'' },
+    { tplName:'笔记底栏组件曝光量',srcR1:'组件效果数据',            srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件曝光量',status:'mapped',note:'' },
+    { tplName:'笔记底栏组件点击量',srcR1:'组件效果数据',            srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件点击量',status:'mapped',note:'' },
+    { tplName:'笔记底栏组件点击人数',srcR1:'组件效果数据',          srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件点击人数',status:'mapped',note:'' },
+    { tplName:'笔记底栏组件CTR', srcR1:'组件效果数据',              srcR2:'笔记底栏组件',              srcR3:'笔记底栏组件CTR', status:'mapped', note:'' },
+    { tplName:'互动组件类型',    srcR1:'组件效果数据',              srcR2:'互动组件',                  srcR3:'互动组件类型',    status:'mapped', note:'' },
+    { tplName:'互动组件标题',    srcR1:'组件效果数据',              srcR2:'互动组件',                  srcR3:'互动组件标题',    status:'mapped', note:'' },
+    { tplName:'互动组件曝光人数',srcR1:'组件效果数据',              srcR2:'互动组件',                  srcR3:'互动组件曝光人数',status:'mapped', note:'' },
+    { tplName:'互动组件参与人数',srcR1:'组件效果数据',              srcR2:'互动组件',                  srcR3:'互动组件参与人数',status:'mapped', note:'' },
+    { tplName:'互动组件参与率',  srcR1:'组件效果数据',              srcR2:'互动组件',                  srcR3:'互动组件参与率',  status:'mapped', note:'' },
+    { tplName:'评论区组件类型',  srcR1:'组件效果数据',              srcR2:'评论区组件',                srcR3:'评论区组件类型',  status:'mapped', note:'' },
+    { tplName:'评论区组件文案',  srcR1:'组件效果数据',              srcR2:'评论区组件',                srcR3:'评论区组件文案',  status:'mapped', note:'' },
+    { tplName:'评论区组件曝光量',srcR1:'组件效果数据',              srcR2:'评论区组件',                srcR3:'评论区组件曝光量',status:'mapped', note:'' },
+    { tplName:'评论区组件点击量',srcR1:'组件效果数据',              srcR2:'评论区组件',                srcR3:'评论区组件点击量',status:'mapped', note:'' },
+    { tplName:'评论区组件点击人数',srcR1:'组件效果数据',            srcR2:'评论区组件',                srcR3:'评论区组件点击人数',status:'mapped',note:'' },
+    { tplName:'评论区组件CTR',   srcR1:'组件效果数据',              srcR2:'评论区组件',                srcR3:'评论区组件CTR',   status:'mapped', note:'' },
+    // ── 受众分析 ──────────────────────────────────────────────
+    { tplName:'粉丝占比',        srcR1:'阅读受众分析',              srcR2:'',                          srcR3:'粉丝占比',        status:'mapped', note:'' },
+    { tplName:'女',              srcR1:'阅读受众分析',              srcR2:'性别',                      srcR3:'女',              status:'mapped', note:'' },
+    { tplName:'男',              srcR1:'阅读受众分析',              srcR2:'性别',                      srcR3:'男',              status:'mapped', note:'' },
+    { tplName:'<18岁',           srcR1:'阅读受众分析',              srcR2:'年龄',                      srcR3:'<18',             status:'mapped', note:'' },
+    { tplName:'18~24岁',         srcR1:'阅读受众分析',              srcR2:'年龄',                      srcR3:'18~24',           status:'mapped', note:'' },
+    { tplName:'25~34岁',         srcR1:'阅读受众分析',              srcR2:'年龄',                      srcR3:'25~34',           status:'mapped', note:'' },
+    { tplName:'35~44岁',         srcR1:'阅读受众分析',              srcR2:'年龄',                      srcR3:'35~44',           status:'mapped', note:'' },
+    { tplName:'>44岁',           srcR1:'阅读受众分析',              srcR2:'年龄',                      srcR3:'>44',             status:'mapped', note:'' },
+    { tplName:'手机型号top1',    srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top1',            status:'mapped', note:'' },
+    { tplName:'手机型号top1占比',srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top1占比',        status:'mapped', note:'' },
+    { tplName:'手机型号top2',    srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top2',            status:'mapped', note:'' },
+    { tplName:'手机型号top2占比',srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top2占比',        status:'mapped', note:'' },
+    { tplName:'手机型号top3',    srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top3',            status:'mapped', note:'' },
+    { tplName:'手机型号top3占比',srcR1:'阅读受众分析',              srcR2:'手机型号top3',              srcR3:'top3占比',        status:'mapped', note:'' },
+    { tplName:'地域分布top1',    srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top1',            status:'mapped', note:'' },
+    { tplName:'地域分布top1占比',srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top1占比',        status:'mapped', note:'' },
+    { tplName:'地域分布top2',    srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top2',            status:'mapped', note:'' },
+    { tplName:'地域分布top2占比',srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top2占比',        status:'mapped', note:'' },
+    { tplName:'地域分布top3',    srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top3',            status:'mapped', note:'' },
+    { tplName:'地域分布top3占比',srcR1:'阅读受众分析',              srcR2:'地域分布top3',              srcR3:'top3占比',        status:'mapped', note:'' },
+    { tplName:'兴趣分布top1',    srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top1',            status:'mapped', note:'' },
+    { tplName:'兴趣分布top1占比',srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top1占比',        status:'mapped', note:'' },
+    { tplName:'兴趣分布top2',    srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top2',            status:'mapped', note:'' },
+    { tplName:'兴趣分布top2占比',srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top2占比',        status:'mapped', note:'' },
+    { tplName:'兴趣分布top3',    srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top3',            status:'mapped', note:'' },
+    { tplName:'兴趣分布top3占比',srcR1:'阅读受众分析',              srcR2:'兴趣分布top3',              srcR3:'top3占比',        status:'mapped', note:'' },
+    // ── 跨域项目数据 ──────────────────────────────────────────
+    { tplName:'跨域项目名称',    srcR1:'跨域项目数据',              srcR2:'跨域项目信息',              srcR3:'跨域项目名称',    status:'mapped', note:'' },
+    { tplName:'跨域项目ID',      srcR1:'跨域项目数据',              srcR2:'跨域项目信息',              srcR3:'跨域项目ID',      status:'mapped', note:'' },
+    { tplName:'跨域阅读UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'阅读uv',          status:'mapped', note:'' },
+    { tplName:'跨域评论UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'评论uv',          status:'mapped', note:'' },
+    { tplName:'跨域点赞UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'点赞uv',          status:'mapped', note:'' },
+    { tplName:'跨域收藏UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'收藏uv',          status:'mapped', note:'' },
+    { tplName:'跨域分享UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'分享uv',          status:'mapped', note:'' },
+    { tplName:'跨域关注UV',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'关注uv',          status:'mapped', note:'' },
+    { tplName:'投放总金额',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'总金额',          status:'mapped', note:'数据源字段名为"总金额"' },
+    { tplName:'蒲公英金额',      srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'蒲公英金额',      status:'mapped', note:'' },
+    { tplName:'广告金额',        srcR1:'跨域项目数据',              srcR2:'小红书站内效果',            srcR3:'广告金额',        status:'mapped', note:'' },
+    // ── TB淘宝 30天 ──────────────────────────────────────────
+    { tplName:'TB任务开始日期',  srcR1:'跨域项目数据',              srcR2:'淘宝合作效果',              srcR3:'任务开始时间',    status:'mapped', note:'' },
+    { tplName:'TB任务结束日期',  srcR1:'跨域项目数据',              srcR2:'淘宝合作效果',              srcR3:'任务结束时间',    status:'mapped', note:'' },
+    { tplName:'TB任务ID',        srcR1:'跨域项目数据',              srcR2:'淘宝合作效果',              srcR3:'任务ID',          status:'mapped', note:'' },
+    { tplName:'TB抽样比例',      srcR1:'跨域项目数据',              srcR2:'淘宝合作效果',              srcR3:'抽样比例',        status:'mapped', note:'' },
+    { tplName:'TB归因店铺名称',  srcR1:'跨域项目数据',              srcR2:'淘宝合作效果',              srcR3:'归因店铺名称',    status:'mapped', note:'' },
+    { tplName:'TB站外活跃行为UV（30天）', srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃行为uv（30天设备归因）', status:'mapped', note:'' },
+    { tplName:'TB站外活跃率（30天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃率（30天设备归因',       status:'mapped', note:'数据源字段名末尾缺少右括号' },
+    { tplName:'TB站外活跃成本（30天）',   srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃成本（30天设备归因）',   status:'mapped', note:'' },
+    { tplName:'TB新访客UV（30天）',       srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'新访客UV（30天设备归因）',       status:'mapped', note:'' },
+    { tplName:'TB搜索进店UV（30天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'搜索进店UV（30天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB关注店铺UV（30天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'关注店铺UV（30天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB加购UV（30天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'加购UV（30天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB收藏商品UV（30天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'收藏商品UV（30天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB加购率（30天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'加购率（30天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB成交UV（30天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'成交UV（30天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB购买率（30天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'购买率（30天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB累计成交成本（30天）',   srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'累计成交成本（30天设备归因）',   status:'mapped', note:'' },
+    // ── TB淘宝 15天 ──────────────────────────────────────────
+    { tplName:'TB站外活跃行为UV（15天）', srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃行为uv（15天设备归因）', status:'mapped', note:'' },
+    { tplName:'TB站外活跃率（15天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃率（15天设备归因',       status:'mapped', note:'数据源字段名末尾缺少右括号' },
+    { tplName:'TB站外活跃成本（15天）',   srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'站外活跃成本（15天设备归因）',   status:'mapped', note:'' },
+    { tplName:'TB新访客UV（15天）',       srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'新访客UV（15天设备归因）',       status:'mapped', note:'' },
+    { tplName:'TB关注店铺UV（15天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'关注店铺UV（15天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB搜索进店UV（15天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'搜索进店UV（15天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB加购UV（15天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'加购UV（15天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB收藏商品UV（15天）',     srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'收藏商品UV（15天设备归因）',     status:'mapped', note:'' },
+    { tplName:'TB成交UV（15天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'成交UV（15天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB购买率（15天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'购买率（15天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB加购率（15天）',         srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'加购率（15天设备归因）',         status:'mapped', note:'' },
+    { tplName:'TB累计成交成本（15天）',   srcR1:'跨域项目数据',   srcR2:'淘宝合作效果',              srcR3:'累计成交成本（15天设备归因）',   status:'mapped', note:'' },
+    // ── JD京东 30天 ──────────────────────────────────────────
+    { tplName:'JD任务开始日期',  srcR1:'跨域项目数据',              srcR2:'京东合作效果',              srcR3:'任务开始时间',    status:'mapped', note:'' },
+    { tplName:'JD任务结束日期',  srcR1:'跨域项目数据',              srcR2:'京东合作效果',              srcR3:'任务结束时间',    status:'mapped', note:'' },
+    { tplName:'JD抽样比例',      srcR1:'跨域项目数据',              srcR2:'京东合作效果',              srcR3:'抽样比例',        status:'mapped', note:'' },
+    { tplName:'JD站外活跃行为UV（30天）', srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃行为uv（30天设备归因）', status:'mapped', note:'' },
+    { tplName:'JD站外活跃率（30天）',     srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃率（30天设备归因）',     status:'mapped', note:'' },
+    { tplName:'JD站外活跃成本（30天）',   srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃成本（30天设备归因）',   status:'mapped', note:'' },
+    { tplName:'JD意向行为UV（30天）',     srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'意向行为uv（30天设备归因）',     status:'mapped', note:'' },
+    { tplName:'JD意向行为转化率（30天）', srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'意向行为转化率（30天设备归因）', status:'mapped', note:'' },
+    { tplName:'JD意向行为转化成本（30天）',srcR1:'跨域项目数据',  srcR2:'京东合作效果',              srcR3:'意向行为转化成本（30天设备归因）',status:'mapped',note:'' },
+    // ── JD京东 15天 ──────────────────────────────────────────
+    { tplName:'JD站外活跃行为UV（15天）', srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃行为uv（15天设备归因）', status:'mapped', note:'' },
+    { tplName:'JD站外活跃率（15天）',     srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃率（15天设备归因）',     status:'mapped', note:'' },
+    { tplName:'JD站外活跃成本（15天）',   srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'站外活跃成本（15天设备归因）',   status:'mapped', note:'' },
+    { tplName:'JD意向行为UV（15天）',     srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'意向行为uv（15天设备归因）',     status:'mapped', note:'' },
+    { tplName:'JD意向行为转化率（15天）', srcR1:'跨域项目数据',   srcR2:'京东合作效果',              srcR3:'意向行为转化率（15天设备归因）', status:'mapped', note:'' },
+    { tplName:'JD意向行为转化成本（15天）',srcR1:'跨域项目数据',  srcR2:'京东合作效果',              srcR3:'意向行为转化成本（15天设备归因）',status:'mapped',note:'' },
+  ]
+  ,
+  juguang: [
+    // ── 基础信息 ──────────────────────────────────────────────
+    { tplName:'日期(单日)',                      srcName:'时间',                                          status:'mapped', note:'CSV字段名为"时间"' },
+    { tplName:'创作者',                          srcName:'创作者',                                        status:'mapped', note:'' },
+    { tplName:'笔记/素材ID',                     srcName:'笔记/素材ID',                                   status:'mapped', note:'' },
+    { tplName:'笔记/素材链接',                   srcName:'笔记/素材链接',                                 status:'mapped', note:'' },
+    // ── 消费与展现 ────────────────────────────────────────────
+    { tplName:'消费',                            srcName:'消费',                                          status:'mapped', note:'' },
+    { tplName:'展现量',                          srcName:'展现量',                                        status:'mapped', note:'' },
+    { tplName:'点击量',                          srcName:'点击量',                                        status:'mapped', note:'' },
+    { tplName:'点击率',                          srcName:'点击率',                                        status:'mapped', note:'' },
+    { tplName:'平均千展成本',                    srcName:'平均千次展示费用',                              status:'mapped', note:'CSV字段名为"平均千次展示费用"' },
+    { tplName:'平均点击成本',                    srcName:'平均点击成本',                                  status:'mapped', note:'' },
+    { tplName:'平均互动成本',                    srcName:'平均互动成本',                                  status:'mapped', note:'' },
+    // ── 互动数据 ──────────────────────────────────────────────
+    { tplName:'互动量',                          srcName:'互动量',                                        status:'mapped', note:'' },
+    { tplName:'点赞',                            srcName:'点赞',                                          status:'mapped', note:'' },
+    { tplName:'收藏',                            srcName:'收藏',                                          status:'mapped', note:'' },
+    { tplName:'评论',                            srcName:'评论',                                          status:'mapped', note:'' },
+    { tplName:'关注',                            srcName:'关注',                                          status:'mapped', note:'' },
+    { tplName:'分享',                            srcName:'分享',                                          status:'mapped', note:'' },
+    { tplName:'截图',                            srcName:'截图',                                          status:'mapped', note:'' },
+    { tplName:'保存图片',                        srcName:'保存图片',                                      status:'mapped', note:'' },
+    { tplName:'按钮点击量',                      srcName:'行动按钮点击量',                                status:'mapped', note:'CSV字段名为"行动按钮点击量"' },
+    { tplName:'按钮点击率',                      srcName:'行动按钮点击率',                                status:'mapped', note:'CSV字段名为"行动按钮点击率"' },
+    // ── 视频数据 ──────────────────────────────────────────────
+    { tplName:'视频播放量',                      srcName:'视频播放量',                                    status:'mapped', note:'' },
+    { tplName:'视频5s播放量',                    srcName:'视频5s播放量',                                  status:'mapped', note:'' },
+    { tplName:'视频5s完播率',                    srcName:'视频5s完播率',                                  status:'mapped', note:'' },
+    // ── 搜索数据 ──────────────────────────────────────────────
+    { tplName:'搜索组件点击量',                  srcName:'搜索组件点击量',                                status:'mapped', note:'' },
+    { tplName:'搜索组件点击转化率',              srcName:'搜索组件点击转化率',                            status:'mapped', note:'' },
+    { tplName:'搜后阅读量',                      srcName:'搜后阅读量',                                    status:'mapped', note:'' },
+    { tplName:'搜后阅读笔记篇数',                srcName:'平均搜索后阅读笔记篇数',                        status:'mapped', note:'CSV字段名为"平均搜索后阅读笔记篇数"' },
+    // ── 种草人群 ──────────────────────────────────────────────
+    { tplName:'新增种草人群',                    srcName:'新增种草人群',                                  status:'mapped', note:'' },
+    { tplName:'新增种草人群成本',                srcName:'新增种草人群成本',                              status:'mapped', note:'' },
+    { tplName:'新增深度种草人群',                srcName:'新增深度种草人群',                              status:'mapped', note:'' },
+    { tplName:'新增深度种草人群成本',            srcName:'新增深度种草人群成本',                          status:'mapped', note:'' },
+    // ── 站外活跃（30日）────────────────────────────────────────
+    { tplName:'站外活跃行为(30日)(去重)',         srcName:'去重后小红星站外活跃行为(30日归因)',            status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    { tplName:'站外活跃率(30日)(去重)',           srcName:'去重后小红星站外活跃率(30日归因)',              status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    { tplName:'站外活跃成本(30日)(去重)',         srcName:'去重后小红星站外活跃成本(30日归因)',            status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    // ── 站外活跃（15日）────────────────────────────────────────
+    { tplName:'站外活跃行为(15日)(去重)',         srcName:'去重后小红星站外活跃行为(15日归因)',            status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    { tplName:'站外活跃率(15日)(去重)',           srcName:'去重后小红星站外活跃率(15日归因)',              status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    { tplName:'站外活跃成本(15日)(去重)',         srcName:'去重后小红星站外活跃成本(15日归因)',            status:'mapped', note:'CSV字段名含"去重后小红星"前缀' },
+    // ── 小红星 ────────────────────────────────────────────────
+    { tplName:'小红星任务期消费',                srcName:'小红星任务期消费',                              status:'mapped', note:'' },
+    { tplName:'小红星任务期阅读UV',              srcName:'小红星任务期阅读UV',                            status:'mapped', note:'' },
+    // ── 组件点击 ──────────────────────────────────────────────
+    { tplName:'组件点击量(计费时间)',             srcName:'组件点击量(计费时间)',                          status:'mapped', note:'' },
+    { tplName:'组件点击转化率',                  srcName:'组件点击转化率',                                status:'mapped', note:'' },
+    { tplName:'组件点击成本(7日)(计费时间)',      srcName:'组件点击成本(7日)(计费时间)',                   status:'mapped', note:'' },
+    // ── 店铺成交订单量 ────────────────────────────────────────
+    { tplName:'店铺成交订单量(30日)(计费时间)',   srcName:'店铺成交订单量(30日)(计费时间)',                status:'mapped', note:'' },
+    { tplName:'店铺成交订单量(15日)(计费时间)',   srcName:'店铺成交订单量(15日)(计费时间)',                status:'mapped', note:'' },
+    { tplName:'店铺成交订单量(7日)(计费时间)',    srcName:'店铺成交订单量(7日)(计费时间)',                 status:'mapped', note:'' },
+    // ── 店铺成交订单转化率 ────────────────────────────────────
+    { tplName:'店铺成交订单转化率(30日)',         srcName:'店铺成交订单转化率(30日)',                      status:'mapped', note:'' },
+    { tplName:'店铺成交订单转化率(15日)',         srcName:'店铺成交订单转化率(15日)',                      status:'mapped', note:'' },
+    { tplName:'店铺成交订单转化率(7日)',          srcName:'店铺成交订单转化率(7日)',                       status:'mapped', note:'' },
+    // ── 店铺成交GMV ───────────────────────────────────────────
+    { tplName:'店铺成交GMV(30日)(计费时间)',      srcName:'店铺成交GMV(30日)(计费时间)',                   status:'mapped', note:'' },
+    { tplName:'店铺成交GMV(15日)(计费时间)',      srcName:'店铺成交GMV(15日)(计费时间)',                   status:'mapped', note:'' },
+    { tplName:'店铺成交GMV(7日)(计费时间)',       srcName:'店铺成交GMV(7日)(计费时间)',                    status:'mapped', note:'' },
+    // ── 店铺成交订单成本 ──────────────────────────────────────
+    { tplName:'店铺成交订单成本(30日)(计费时间)', srcName:'店铺成交订单成本(30日)(计费时间)',              status:'mapped', note:'' },
+    { tplName:'店铺成交订单成本(15日)(计费时间)', srcName:'店铺成交订单成本(15日)(计费时间)',              status:'mapped', note:'' },
+    { tplName:'店铺成交订单成本(7日)(计费时间)',  srcName:'店铺成交订单成本(7日)(计费时间)',               status:'mapped', note:'' },
+    // ── 店铺成交ROI ───────────────────────────────────────────
+    { tplName:'店铺成交ROI(30日)(计费时间)',      srcName:'店铺成交ROI(30日)(计费时间)',                   status:'mapped', note:'' },
+    { tplName:'店铺成交ROI(15日)(计费时间)',      srcName:'店铺成交ROI(15日)(计费时间)',                   status:'mapped', note:'' },
+    { tplName:'店铺成交ROI(7日)(计费时间)',       srcName:'店铺成交ROI(7日)(计费时间)',                    status:'mapped', note:'' },
+    // ── 店铺加购量 ────────────────────────────────────────────
+    { tplName:'店铺加购量(30日)',                 srcName:'店铺加购量(30日)',                              status:'mapped', note:'' },
+    { tplName:'店铺加购量(15日)',                 srcName:'店铺加购量(15日)',                              status:'mapped', note:'' },
+    { tplName:'店铺加购量(7日)',                  srcName:'店铺加购量(7日)',                               status:'mapped', note:'' },
+    // ── 店铺加购率 ────────────────────────────────────────────
+    { tplName:'店铺加购率(30日)',                 srcName:'店铺加购率(30日)',                              status:'mapped', note:'' },
+    { tplName:'店铺加购率(15日)',                 srcName:'店铺加购率(15日)',                              status:'mapped', note:'' },
+    { tplName:'店铺加购率(7日)',                  srcName:'店铺加购率(7日)',                               status:'mapped', note:'' },
+    // ── 店铺加购成本 ──────────────────────────────────────────
+    { tplName:'店铺加购成本(30日)',               srcName:'店铺加购成本(30日)',                            status:'mapped', note:'' },
+    { tplName:'店铺加购成本(15日)',               srcName:'店铺加购成本(15日)',                            status:'mapped', note:'' },
+    { tplName:'店铺加购成本(7日)',                srcName:'店铺加购成本(7日)',                             status:'mapped', note:'' },
+    // ── 店铺访问数 ────────────────────────────────────────────
+    { tplName:'店铺访问数(30日)(计费时间)',        srcName:'店铺访问数(30日)(计费时间)',                    status:'mapped', note:'' },
+    { tplName:'店铺访问量(15日)(计费时间)',        srcName:'店铺访问量(15日)(计费时间)',                    status:'mapped', note:'' },
+    { tplName:'店铺访问量(7日)(计费时间)',         srcName:'店铺访问量(7日)(计费时间)',                     status:'mapped', note:'' },
+    // ── 店铺访问率 ────────────────────────────────────────────
+    { tplName:'店铺访问率(30日)',                 srcName:'店铺访问率(30日)',                              status:'mapped', note:'' },
+    { tplName:'店铺访问率(15日)',                 srcName:'店铺访问率(15日)',                              status:'mapped', note:'' },
+    { tplName:'店铺访问率(7日)',                  srcName:'店铺访问率(7日)',                               status:'mapped', note:'' },
+    // ── 店铺访问成本 ──────────────────────────────────────────
+    { tplName:'店铺访问成本(30日)(计费时间)',      srcName:'店铺访问成本(30日)(计费时间)',                  status:'mapped', note:'' },
+    { tplName:'店铺访问成本(15日)(计费时间)',      srcName:'店铺访问成本(15日)(计费时间)',                  status:'mapped', note:'' },
+    { tplName:'店铺访问成本(7日)(计费时间)',       srcName:'店铺访问成本(7日)(计费时间)',                   status:'mapped', note:'' },
+  ]
+};
+
+// ============================================================
+// 数据源独有字段（不填充到模板，仅记录）
+// ============================================================
+const SRC_ONLY_FIELDS = {
+  juguang: [], // 聚光广告数据源无独有字段（CSV与模板字段完全对应）
+  pugongying: [
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'任务开始时间' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'任务结束时间' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'品牌名称' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'抽样比例' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外行为UV（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外转化率（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外转化成本（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外行为UV（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外转化率（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'唯品会合作效果', r3:'站外转化成本（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'任务开始时间' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'任务结束时间' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'任务ID' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'品牌名称' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'抽样比例' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃行为uv（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃率（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃成本（30天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃行为uv（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃率（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃成本（15天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃行为uv（7天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃率（7天设备归因）' },
+    { r1:'跨域项目数据', r2:'美团合作效果', r3:'站外活跃成本（7天设备归因）' },
+  ]
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  dataType: 'pugongying',
+  file: null,
+  workbook: null,
+  srcData: null,       // 解析后的数据源数据
+  resultData: null,    // 填充后的结果数据
+  outputWb: null,      // 匹配完成时即时冻结的 workbook，下载时直接使用
+  outputFileName: null,// 匹配完成时即时冻结的文件名
+  verifyErrors: [],
+  logCount: 0,
+};
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderMappingTable();
+  renderSrcOnlyFields();
+  updateStats();
+});
+
+// ============================================================
+// CHANGELOG MODAL
+// ============================================================
+function showChangelog() {
+  document.getElementById('changelogModal').classList.add('open');
+}
+function closeChangelog(e) {
+  if (e.target === document.getElementById('changelogModal')) {
+    document.getElementById('changelogModal').classList.remove('open');
+  }
+}
+
+// ============================================================
+// TYPE SELECTION
+// ============================================================
+function selectType(type) {
+  state.dataType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('typeBtn_' + type).classList.add('active');
+  renderMappingTable();
+  renderSrcOnlyFields();
+  // 更新上传提示
+  const hint = document.getElementById('uploadHint');
+  if (hint) {
+    hint.textContent = type === 'pugongying'
+      ? '支持 .xlsx / .xls 格式 · 小红书蒲公英导出数据'
+      : '支持 .xlsx / .xls / .csv 格式 · 小红书聚光广告导出数据';
+  }
+  log('info', `已切换数据类型：${type === 'pugongying' ? '🌼 蒲公英数据' : '💡 聚光广告数据'}`);
+}
+
+// ============================================================
+// FILE HANDLING
+// ============================================================
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.add('dragover');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadArea').classList.remove('dragover');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+function processFile(file) {
+  const isJuguang = state.dataType === 'juguang';
+  if (isJuguang && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+    alert('聚光广告数据请上传 .xlsx、.xls 或 .csv 格式的文件');
+    return;
+  }
+  if (!isJuguang && !file.name.match(/\.(xlsx|xls)$/i)) {
+    alert('蒲公英数据请上传 .xlsx 或 .xls 格式的 Excel 文件');
+    return;
+  }
+  state.file = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatSize(file.size) + ' · ' + new Date().toLocaleString();
+  document.getElementById('fileInfo').classList.add('show');
+  document.getElementById('startBtn').disabled = false;
+  log('success', `✅ 文件已选择：${file.name} (${formatSize(file.size)})`);
+  setStep(1);
+}
+function clearFile() {
+  state.file = null;
+  state.workbook = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileInfo').classList.remove('show');
+  document.getElementById('startBtn').disabled = true;
+  log('info', '已清除文件选择');
+}
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+
+// ============================================================
+// MAIN MAPPING PROCESS
+// ============================================================
+async function startMapping() {
+  if (!state.file) return;
+  showProcessing('正在解析数据源...', '读取 Excel 文件中');
+  await sleep(100);
+  try {
+    log('section', '═══════════════════════════════════════');
+    log('section', '  开始执行映射匹配流程');
+    log('section', '═══════════════════════════════════════');
+    log('info', `📂 数据类型：${state.dataType === 'pugongying' ? '蒲公英数据' : '聚光广告数据'}`);
+    log('info', `📄 文件名：${state.file.name}`);
+
+    // Step 1: Read file
+    setStep(2);
+    updateProgress(10, '正在读取文件...');
+    const arrayBuffer = await readFileAsArrayBuffer(state.file);
+    log('success', `✅ 文件读取成功，大小：${formatSize(arrayBuffer.byteLength)}`);
+
+    // Step 2: Parse Excel / CSV（CSV 先转为 xlsx 内部格式，统一后续处理）
+    updateProgress(20, '正在解析文件...');
+    let ws;
+    if (state.file.name.match(/\.csv$/i)) {
+      // CSV 格式：先用 SheetJS 解析为 workbook，再统一按 xlsx 流程处理
+      log('info', `📊 检测到 CSV 格式，先转换为内部 xlsx 格式再处理`);
+      // 尝试 UTF-8 解码，若乱码可改为 GBK
+      const text = new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer));
+      const csvWb = XLSX.read(text, { type: 'string', cellDates: false });
+      const csvSheetName = csvWb.SheetNames[0];
+      const csvWs = csvWb.Sheets[csvSheetName];
+      // 将 CSV sheet 数据转为 AOA，再重新构建 workbook（确保格式统一）
+      const aoa = XLSX.utils.sheet_to_json(csvWs, { header: 1, defval: '' });
+      const xlsxWs = XLSX.utils.aoa_to_sheet(aoa);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, xlsxWs, csvSheetName);
+      state.workbook = workbook;
+      log('info', `📊 CSV 已转换为 xlsx 内部格式，工作表：${csvSheetName}`);
+      ws = workbook.Sheets[csvSheetName];
+    } else {
+      // Excel 格式（.xlsx / .xls）
+      const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
+      state.workbook = workbook;
+      log('info', `📊 工作表列表：${workbook.SheetNames.join(', ')}`);
+      const sheetName = workbook.SheetNames[0];
+      log('info', `📋 使用工作表：${sheetName}`);
+      ws = workbook.Sheets[sheetName];
+    }
+
+    // Step 3: Parse multi-level headers
+    updateProgress(30, '正在解析多级表头...');
+    log('section', '── 阶段1：解析多级表头 ──');
+    const { srcColMap, totalCols, totalRows, dataStartRow } = parseSrcHeaders(ws);
+    log('success', `✅ 表头解析完成：共 ${totalCols} 列，${totalRows} 行数据`);
+    document.getElementById('statTotal').textContent = totalRows;
+
+    // Step 4: Build column index
+    updateProgress(40, '正在建立字段索引...');
+    log('section', '── 阶段2：建立字段映射索引 ──');
+    const mapping = MAPPING_CONFIG[state.dataType];
+    let matchedCount = 0, notFoundCount = 0;
+    const colIndexMap = {}; // tplCol -> srcColIndex
+
+    for (let mi = 0; mi < mapping.length; mi++) {
+      const m = mapping[mi];
+      const colNum = mi + 1; // 1-indexed 列号（自动计算）
+      if (m.status === 'blank') {
+        log('info', `  ⬜ [留白] 模板列${colNum} "${m.tplName}" → 公式字段，跳过`);
+        continue;
+      }
+      // 聚光广告用 srcName 直接查找；蒲公英用 srcR1|srcR2|srcR3 拼接键查找
+      let key, srcCol;
+      if (m.srcName !== undefined) {
+        // 聚光广告模式：直接用字段名
+        key = m.srcName;
+        srcCol = srcColMap[key];
+      } else {
+        // 蒲公英模式：多级表头拼接键
+        key = buildSrcKey(m.srcR1, m.srcR2, m.srcR3);
+        srcCol = srcColMap[key];
+      }
+      if (srcCol !== undefined) {
+        colIndexMap[mi] = srcCol;
+        matchedCount++;
+        log('success', `  ✅ [映射] 模板列${colNum} "${m.tplName}" → 数据源列${srcCol+1} (${key})`);
+      } else {
+        notFoundCount++;
+        log('warning', `  ⚠️ [未找到] 模板列${colNum} "${m.tplName}" → 数据源中未找到 (${key})`);
+      }
+    }
+    log('highlight', `📊 映射结果：成功 ${matchedCount} 个，未找到 ${notFoundCount} 个`);
+
+    // Step 5: Extract data rows
+    updateProgress(50, '正在提取数据行...');
+    log('section', '── 阶段3：提取数据行 ──');
+    const srcRows = extractDataRows(ws, totalRows, dataStartRow);
+    // 保存原始数据副本（未经任何转换），用于验证阶段与输出结果比对
+    state.rawSrcRows = srcRows.map(row => row.slice());
+    log('success', `✅ 提取数据行：${srcRows.length} 行（已保存原始副本用于验证）`);
+
+    // Step 5.5: 聚光广告单日日期验证
+    if (state.dataType === 'juguang') {
+      log('section', '── 阶段3.5：验证数据源日期格式 ──');
+      const dateCheckResult = validateJuguangDate(srcRows);
+      if (!dateCheckResult.valid) {
+        log('error', `❌ 日期格式验证失败：${dateCheckResult.reason}`);
+        log('error', `   检测到的值：${dateCheckResult.sample}`);
+        log('warning', '⚠️ 请将数据源更换为【单日日期】的数据后重新上传');
+        log('warning', '   单日格式示例：2026/02/07 或 2026-02-07');
+        log('warning', '   时间段格式（不支持）：2026-01-10~2026-01-15');
+        updateProgress(0, '');
+        setStep(1);
+        document.getElementById('startBtn').disabled = false;
+        // 弹出提示
+        setTimeout(() => {
+          alert(`❌ 数据源日期格式不符合要求\n\n检测到的值："${dateCheckResult.sample}"\n\n该工具仅支持【单日日期】的聚光广告数据。\n请将数据源时间维度切换为"按天"后重新导出上传。`);
+        }, 100);
+        return;
+      }
+      log('success', `✅ 日期格式验证通过：检测到单日日期（示例：${dateCheckResult.sample}）`);
+    }
+
+    // Step 6: Fill template
+    setStep(3);
+    updateProgress(60, '正在填充模板...');
+    log('section', '── 阶段4：填充模板数据 ──');
+    const resultRows = fillTemplate(srcRows, colIndexMap, mapping);
+    state.resultData = resultRows;
+    log('success', `✅ 模板填充完成：${resultRows.length} 行数据`);
+
+    // Step 7: Verify
+    setStep(4);
+    updateProgress(80, '正在验证数据...');
+    log('section', '── 阶段5：数据验证 ──');
+    const errors = verifyData(state.rawSrcRows, resultRows, colIndexMap, mapping);
+    state.verifyErrors = errors;
+
+    if (errors.length === 0) {
+      log('success', '🎉 数据验证通过！所有字段数据匹配无误');
+      document.getElementById('statErrorItem').className = 'stat-item success';
+      document.getElementById('statErrors').textContent = '0';
+    } else {
+      log('error', `❌ 发现 ${errors.length} 处数据异常，请查看"数据验证"标签页`);
+      document.getElementById('statErrorItem').className = 'stat-item danger';
+      document.getElementById('statErrors').textContent = errors.length;
+    }
+    renderVerifyResults(errors, resultRows.length);
+
+    // Complete
+    updateProgress(100, '✅ 映射完成');
+    log('section', '═══════════════════════════════════════');
+    log('section', `  映射匹配完成！共处理 ${resultRows.length} 行数据`);
+    log('section', '═══════════════════════════════════════');
+
+    // 匹配完成时即时构建并冻结 workbook，后续切换类型不影响此结果
+    const _ts = new Date();
+    const _pad = n => String(n).padStart(2,'0');
+    const _timestamp = `${_ts.getFullYear()}${_pad(_ts.getMonth()+1)}${_pad(_ts.getDate())}${_pad(_ts.getHours())}${_pad(_ts.getMinutes())}${_pad(_ts.getSeconds())}`;
+    const _typeLabel = state.dataType === 'juguang' ? '聚光广告' : '蒲公英';
+    const _fileName = `匹配成功_${_typeLabel}_${_timestamp}.xlsx`;
+    const _sheetName = state.dataType === 'juguang' ? '聚光广告数据' : '蒲公英数据';
+    const _headerRow = mapping.map(m => m.tplName);
+    const _wsData = [_headerRow, ...resultRows];
+    const _ws = XLSX.utils.aoa_to_sheet(_wsData);
+    _ws['!cols'] = mapping.map(m => ({ wch: Math.max(10, m.tplName.length * 2) }));
+    const _wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(_wb, _ws, _sheetName);
+    state.outputWb = _wb;       // 冻结存入 state
+    state.outputFileName = _fileName;
+
+    // Show download
+    document.getElementById('downloadCard').style.display = 'block';
+    document.getElementById('downloadFileName').textContent = _fileName;
+    document.getElementById('downloadFileDesc').textContent = `${resultRows.length} 行 × ${mapping.length} 列 · ${errors.length === 0 ? '验证通过 ✅' : `${errors.length} 处异常 ⚠️`}`;
+
+    showTab('log');
+    hideProcessing();
+
+  } catch (err) {
+    hideProcessing();
+    log('error', `❌ 处理失败：${err.message}`);
+    log('error', err.stack || '');
+    console.error(err);
+    alert('处理失败：' + err.message);
+  }
+}
+
+// ============================================================
+// PARSE HEADERS
+// ============================================================
+function parseSrcHeaders(ws) {
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const totalCols = range.e.c + 1;
+
+  log('info', `  表格范围：${ws['!ref']}，共 ${totalCols} 列`);
+
+  // 判断是否为单行表头（聚光广告CSV：第1行即字段名，第2行起为数据）
+  const isSingleHeader = state.dataType === 'juguang';
+  const dataStartRow = isSingleHeader ? 1 : 3; // 数据从第几行开始（0-indexed）
+  const totalRows = range.e.r - dataStartRow + 1;
+
+  if (isSingleHeader) {
+    log('info', `  📋 聚光广告模式：单行表头，数据从第2行开始`);
+  } else {
+    log('info', `  📋 蒲公英模式：3级多行表头，数据从第4行开始`);
+  }
+
+  // 获取合并单元格信息（蒲公英模式使用）
+  const merges = ws['!merges'] || [];
+  const mergeMap = {};
+  for (const m of merges) {
+    for (let r = m.s.r; r <= m.e.r; r++) {
+      for (let c = m.s.c; c <= m.e.c; c++) {
+        if (r !== m.s.r || c !== m.s.c) {
+          mergeMap[`${r},${c}`] = { r: m.s.r, c: m.s.c };
+        }
+      }
+    }
+  }
+
+  function getCellVal(row, col) {
+    const key = `${row},${col}`;
+    let r = row, c = col;
+    if (mergeMap[key]) { r = mergeMap[key].r; c = mergeMap[key].c; }
+    const addr = XLSX.utils.encode_cell({ r, c });
+    const cell = ws[addr];
+    return cell ? String(cell.v || '').trim() : '';
+  }
+
+  // 构建字段索引
+  const srcColMap = {};
+  log('info', `  解析 ${totalCols} 列表头...`);
+
+  if (isSingleHeader) {
+    // 聚光广告：单行表头，直接用字段名建立索引
+    for (let c = 0; c < totalCols; c++) {
+      const name = getCellVal(0, c);
+      if (name && !srcColMap[name]) {
+        srcColMap[name] = c;
+      }
+    }
+  } else {
+    // 蒲公英：3级多行表头，用 r1|r2|r3 拼接键
+    for (let c = 0; c < totalCols; c++) {
+      const r1 = getCellVal(0, c);
+      const r2 = getCellVal(1, c);
+      const r3 = getCellVal(2, c);
+      const key = buildSrcKey(r1, r2, r3);
+      if (key && !srcColMap[key]) {
+        srcColMap[key] = c;
+      }
+      // 也建立仅r3的索引（用于简单匹配）
+      if (r3 && !srcColMap['__r3__' + r3]) {
+        srcColMap['__r3__' + r3] = c;
+      }
+    }
+  }
+
+  log('info', `  建立了 ${Object.keys(srcColMap).length} 个字段索引`);
+  return { srcColMap, totalCols, totalRows, dataStartRow };
+}
+
+function buildSrcKey(r1, r2, r3) {
+  const parts = [r1, r2, r3].filter(s => s && s.trim());
+  return parts.join('|');
+}
+
+// ============================================================
+// EXTRACT DATA ROWS
+// ============================================================
+function extractDataRows(ws, totalRows, dataStartRow) {
+  dataStartRow = dataStartRow || 3; // 默认蒲公英：从第4行（index=3）开始
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const totalCols = range.e.c + 1;
+  const rows = [];
+
+  for (let r = dataStartRow; r <= range.e.r; r++) {
+    const row = [];
+    for (let c = 0; c < totalCols; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[addr];
+      if (!cell) { row.push(''); continue; }
+      // 直接存入原始値（日期序列号保持为数字）
+      // 日期字段的序列号 → YYYY-MM-DD 转换在 fillTemplate 阶段根据字段名称判断处理
+      row.push(cell.v !== undefined ? cell.v : '');
+    }
+    // 检查是否为空行
+    if (row.every(v => v === '' || v === null || v === undefined)) continue;
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ============================================================
+// DATE UTILITIES
+// ============================================================
+// 日期处理说明：使用 cellDates:false（默认），日期单元格保留为 Excel 序列号（cell.t==='n'）
+// serialToYMD() 用纯数学算法从序列号直接算出年月日，完全不依赖 new Date() 或本地时区
+// 这是唯一能在任何时区下正确工作的方案（SheetJS 的 cellDates:true 在非 UTC 时区有 bug）
+
+/**
+ * 将 Excel 日期序列号转为 YYYY-MM-DD 字符串
+ * 纯数学算法：用 Date.UTC() 构建基准点，再用 getUTC* 读取，完全不受本地时区影响
+ * @param {number} serial - Excel 日期序列号（整数部分）
+ */
+function serialToYMD(serial) {
+  // Excel 有 1900-02-29 bug（序列号60对应不存在的日期），序列号>=61时修正偏移
+  const n = serial >= 61 ? serial - 1 : serial;
+  // 基准：序列号1 = 1900-01-01，Date.UTC(1900,0,0) = 1899-12-31 UTC 午夜
+  const ms = Date.UTC(1900, 0, 0) + n * 86400 * 1000;
+  const d = new Date(ms);
+  // 用 getUTC* 读取（因为用 Date.UTC 构建，UTC 时间就是正确的日期）
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+
+/**
+ * 验证聚光广告数据源第1列是否为单日日期
+ * 支持的单日格式：
+ *   - 字符串：2026/2/7、2026/02/07、2026-02-07、2026.02.07、2026-02-07 00:07:00
+ *   - 数字序列号：46060（整数）或 46060.00048611111（带时间小数）
+ * 不支持的格式：2026-01-10~2026-01-15（时间段）
+ * 验证逻辑：先检测时间段，再尝试提取年月日，能识别出单日日期即通过
+ */
+function validateJuguangDate(srcRows) {
+  if (!srcRows || srcRows.length === 0) {
+    return { valid: false, reason: '数据源无数据行', sample: '' };
+  }
+  // 取第1行第1列的值作为样本
+  const raw = srcRows[0][0];
+  const sample = String(raw === null || raw === undefined ? '' : raw).trim();
+  if (!sample) {
+    return { valid: false, reason: '第1列"时间"字段值为空', sample };
+  }
+  // 检测时间段：含 ~ 或 至 或 to（不区分大小写）
+  if (/[~～]|至|\bto\b/i.test(sample)) {
+    return { valid: false, reason: '检测到时间段格式，该工具仅支持单日日期', sample };
+  }
+  // 数字序列号（CSV 转 xlsx 后日期列可能为数字，如 46060 或 46060.00048611111）
+  const numVal = typeof raw === 'number' ? raw : parseFloat(sample);
+  if (!isNaN(numVal) && numVal > 1000) {
+    // 取整数部分（小数部分为时间，忽略）
+    const normalized = serialToYMD(Math.floor(numVal));
+    return { valid: true, sample: normalized };
+  }
+  // 字符串格式：提取年月日（兼容带时间的格式如 "2026-02-07 00:07:00"）
+  const mDate = sample.match(/(\d{4})[\-\/\.](\d{1,2})[\-\/\.](\d{1,2})/);
+  if (mDate) {
+    const normalized = `${mDate[1]}-${String(mDate[2]).padStart(2,'0')}-${String(mDate[3]).padStart(2,'0')}`;
+    return { valid: true, sample: normalized };
+  }
+  // 其他无法识别的格式
+  return { valid: false, reason: `无法识别的日期格式，请确认第1列为单日日期`, sample };
+}
+
+// ============================================================
+// FILL TEMPLATE
+// ============================================================
+function fillTemplate(srcRows, colIndexMap, mapping) {
+  const tplColCount = mapping.length; // 模板总列数 = 映射条目数（自动计算）
+  const resultRows = [];
+
+  for (let i = 0; i < srcRows.length; i++) {
+    const srcRow = srcRows[i];
+    const tplRow = new Array(tplColCount).fill('');
+
+    for (let mi = 0; mi < mapping.length; mi++) {
+      const m = mapping[mi];
+      if (m.status === 'blank') continue; // 留白字段
+      const tplColIdx = mi; // 0-indexed，直接用数组下标
+      const srcColIdx = colIndexMap[mi];
+      if (srcColIdx !== undefined) {
+        let val = srcRow[srcColIdx];
+        // 处理 '-' 空値
+        if (val === '-' || val === '—') val = '';
+        // 日期字段：若字段名包含"日期"且値是 Excel 序列号（数字），转为 YYYY-MM-DD
+        if (/日期/.test(m.tplName) && typeof val === 'number' && val > 1000) {
+          val = serialToYMD(Math.floor(val));
+        }
+        tplRow[tplColIdx] = val !== undefined ? val : '';
+      }
+    }
+    resultRows.push(tplRow);
+  }
+  return resultRows;
+}
+
+// ============================================================
+// VERIFY DATA
+// 使用原始数据副本（rawSrcRows）与输出结果对比，确保验证有效性
+// 日期字段：将原始值（序列号/字符串）和输出值都转为 YYYY-MM-DD 再比对
+// 非日期字段：直接比对字符串值
+// ============================================================
+function verifyData(rawSrcRows, resultRows, colIndexMap, mapping) {
+  const errors = [];
+  log('info', `  验证 ${resultRows.length} 行 × ${mapping.filter(m=>m.status==='mapped').length} 个映射字段...`);
+  log('info', `  （使用原始数据副本进行比对，日期字段统一转为 YYYY-MM-DD 后比较）`);
+
+  for (let i = 0; i < resultRows.length; i++) {
+    const rawRow = rawSrcRows[i];
+    const tplRow = resultRows[i];
+
+    for (let mi = 0; mi < mapping.length; mi++) {
+      const m = mapping[mi];
+      if (m.status === 'blank') continue;
+      const srcColIdx = colIndexMap[mi];
+      if (srcColIdx === undefined) continue;
+
+      const rawVal = rawRow[srcColIdx];
+      const tplVal = tplRow[mi];
+      const isDateField = /日期|时间/.test(m.tplName);
+
+      // 标准化比较：日期字段双方都转为 YYYY-MM-DD
+      const srcNorm = normalizeValForVerify(rawVal, isDateField);
+      const tplNorm = normalizeValForVerify(tplVal, isDateField);
+
+      if (srcNorm !== tplNorm) {
+        errors.push({
+          row: i + 1,
+          tplCol: mi + 1,
+          tplName: m.tplName,
+          srcVal: rawVal,
+          tplVal: tplVal,
+          srcNorm, tplNorm
+        });
+        if (errors.length <= 20) {
+          log('error', `  ❌ 行${i+1} 列"${m.tplName}"：源值=${JSON.stringify(rawVal)} ≠ 填充值=${JSON.stringify(tplVal)}`);
+        }
+      }
+    }
+  }
+
+  if (errors.length === 0) {
+    log('success', '  ✅ 所有数据验证通过，无错误');
+  } else {
+    log('warning', `  ⚠️ 共发现 ${errors.length} 处不一致`);
+  }
+  return errors;
+}
+
+/**
+ * 验证专用的值标准化函数
+ * @param {*} v - 原始值或填充值
+ * @param {boolean} isDateField - 是否为日期字段
+ */
+function normalizeValForVerify(v, isDateField) {
+  if (v === null || v === undefined || v === '' || v === '-' || v === '—') return '';
+  const s = String(v).trim();
+  if (!s) return '';
+
+  if (isDateField) {
+    // 数字序列号（如 46061 或 46060.00048611111）
+    const num = typeof v === 'number' ? v : parseFloat(s);
+    if (!isNaN(num) && num > 1000 && !/[\-\/]/.test(s)) {
+      return serialToYMD(Math.floor(num));
+    }
+    // 字符串日期（如 2/8/2026、2026/2/8、2026-02-08、2026-02-08 00:07:00）
+    // 先尝试 YYYY-MM-DD 或 YYYY/MM/DD 格式
+    let m = s.match(/^(\d{4})[\-\/\.](\d{1,2})[\-\/\.](\d{1,2})/);
+    if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    // 再尝试 M/D/YYYY 格式（如 2/8/2026）
+    m = s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{4})/);
+    if (m) return `${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  }
+
+  return s;
+}
+
+// ============================================================
+// DOWNLOAD RESULT
+// ============================================================
+function downloadResult() {
+  if (!state.outputWb) { alert('请先执行映射匹配'); return; }
+
+  // 直接使用匹配完成时已冻结的 workbook，不重新生成
+  XLSX.writeFile(state.outputWb, state.outputFileName, { bookType: 'xlsx' });
+
+  log('success', `✅ 文件已下载：${state.outputFileName}`);
+  log('info', `  表头、数据均在匹配完成时已冻结，与当前选择的数据类型无关`);
+}
+
+// ============================================================
+// RENDER MAPPING TABLE
+// ============================================================
+function renderMappingTable() {
+  const mapping = MAPPING_CONFIG[state.dataType] || [];
+  // 动态更新表头
+  const thSrcPath = document.getElementById('thSrcPath');
+  if (thSrcPath) {
+    thSrcPath.textContent = state.dataType === 'juguang'
+      ? '数据源字段名'
+      : '数据源路径（第1级 › 第2级 › 第3级）';
+  }
+  const tbody = document.getElementById('mappingTableBody');
+  tbody.innerHTML = '';
+
+  // Build group options
+  const groups = new Set();
+  for (const m of mapping) {
+    if (m.srcR1) groups.add(m.srcR1);
+  }
+  const groupSel = document.getElementById('filterGroup');
+  groupSel.innerHTML = '<option value="">全部分组</option>';
+  for (const g of groups) {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    groupSel.appendChild(opt);
+  }
+
+  for (let i = 0; i < mapping.length; i++) {
+    const m = mapping[i];
+    const tr = document.createElement('tr');
+    tr.dataset.status = m.status;
+    tr.dataset.group = m.srcR1 || '';
+    tr.dataset.name = (m.tplName + m.srcR1 + m.srcR2 + m.srcR3).toLowerCase();
+
+    let statusBadge = '';
+    if (m.status === 'mapped') statusBadge = '<span class="badge badge-success">✅ 已映射</span>';
+    else if (m.status === 'blank') statusBadge = '<span class="badge badge-gray">⬜ 留白</span>';
+    else if (m.status === 'not_found') statusBadge = '<span class="badge badge-danger">❌ 未找到</span>';
+    else statusBadge = '<span class="badge badge-warning">⚠️ 未配置</span>';
+
+    let srcPath = '';
+    if (m.status !== 'blank') {
+      if (m.srcName !== undefined) {
+        // 聚光广告：直接显示字段名
+        srcPath = `<span class="src-path"><span class="r3">${escHtml(m.srcName)}</span></span>`;
+      } else {
+        // 蒲公英：多级路径
+        const r1 = m.srcR1 ? `<span class="r1">${escHtml(m.srcR1)}</span>` : '';
+        const r2 = (m.srcR2 && m.srcR2 !== m.srcR1) ? `<span class="r2">${escHtml(m.srcR2)}</span>` : '';
+        const r3 = m.srcR3 ? `<span class="r3">${escHtml(m.srcR3)}</span>` : '';
+        const parts = [r1, r2, r3].filter(Boolean);
+        srcPath = `<span class="src-path">${parts.join('<span class="sep"> › </span>')}</span>`;
+      }
+    } else {
+      srcPath = '<span style="color:var(--gray-300);font-size:12px;">— 公式字段，不填充 —</span>';
+    }
+
+    tr.innerHTML = `
+      <td class="col-num">${i+1}</td>
+      <td class="col-num">col${i+1}</td>
+      <td><span class="field-name">${escHtml(m.tplName)}</span></td>
+      <td>${srcPath}</td>
+      <td>${statusBadge}</td>
+      <td><span style="font-size:11px;color:var(--gray-400);">${escHtml(m.note || '')}</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('tabCount_mapping').textContent = mapping.length;
+  document.getElementById('filterCount').textContent = `显示 ${mapping.length} / ${mapping.length} 条`;
+}
+
+function renderSrcOnlyFields() {
+  const fields = SRC_ONLY_FIELDS[state.dataType] || [];
+  const card = document.getElementById('srcOnlyCard');
+  const el = document.getElementById('srcOnlyFields');
+  const subtitle = document.getElementById('srcOnlySubtitle');
+  // 始终显示卡片，字段数为 0 时显示空状态
+  if (card) card.style.display = '';
+  if (subtitle) subtitle.textContent = `共 ${fields.length} 个字段，仅存在于数据源中，不填充到模板`;
+  if (fields.length === 0) {
+    el.innerHTML = '<span style="color:var(--gray-400);font-size:12px;">该数据源无独有字段，所有字段均已建立映射关系</span>';
+    return;
+  }
+  el.innerHTML = fields.map(f =>
+    `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;background:#e0f2fe;border-radius:4px;color:#0369a1;white-space:nowrap;">
+      ${escHtml(f.r2)} › ${escHtml(f.r3)}
+    </span>`
+  ).join('');
+}
+
+// ============================================================
+// FILTER TABLE
+// ============================================================
+function filterTable() {
+  const query = document.getElementById('filterInput').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const group = document.getElementById('filterGroup').value;
+  const rows = document.querySelectorAll('#mappingTableBody tr');
+  let visible = 0;
+  rows.forEach(tr => {
+    const matchQuery = !query || tr.dataset.name.includes(query);
+    const matchStatus = !status || tr.dataset.status === status;
+    const matchGroup = !group || tr.dataset.group === group;
+    if (matchQuery && matchStatus && matchGroup) {
+      tr.style.display = '';
+      visible++;
+    } else {
+      tr.style.display = 'none';
+    }
+  });
+  document.getElementById('filterCount').textContent = `显示 ${visible} / ${rows.length} 条`;
+}
+
+// ============================================================
+// VERIFY RESULTS
+// ============================================================
+function renderVerifyResults(errors, totalRows) {
+  const el = document.getElementById('verifyContent');
+  const count = document.getElementById('tabCount_verify');
+  count.textContent = errors.length;
+
+  if (errors.length === 0) {
+    el.innerHTML = `
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
+        <div>
+          <strong>验证通过！</strong>所有 ${totalRows} 行数据均已正确映射，无任何错误或缺失。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const tableRows = errors.slice(0, 100).map(e => `
+    <tr class="error-row">
+      <td>${e.row}</td>
+      <td>col${e.tplCol}</td>
+      <td>${escHtml(e.tplName)}</td>
+      <td style="color:var(--success);font-family:monospace;">${escHtml(String(e.srcVal ?? ''))}</td>
+      <td style="color:var(--danger);font-family:monospace;">${escHtml(String(e.tplVal ?? ''))}</td>
+    </tr>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="alert alert-warning" style="margin-bottom:12px;">
+      <span class="alert-icon">⚠️</span>
+      <div>发现 <strong>${errors.length}</strong> 处数据不一致${errors.length > 100 ? '（仅显示前100条）' : ''}，请检查映射配置后重新执行。</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="verify-table">
+        <thead>
+          <tr><th>行号</th><th>模板列</th><th>字段名</th><th>数据源值</th><th>填充值</th></tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ============================================================
+// LOG
+// ============================================================
+function log(type, msg) {
+  state.logCount++;
+  const container = document.getElementById('logContainer');
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const entry = document.createElement('div');
+  entry.className = `log-entry log-${type}`;
+  entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-msg">${escHtml(msg)}</span>`;
+  container.appendChild(entry);
+  container.scrollTop = container.scrollHeight;
+  document.getElementById('tabCount_log').textContent = state.logCount;
+}
+function clearLog() {
+  document.getElementById('logContainer').innerHTML = '';
+  state.logCount = 0;
+  document.getElementById('tabCount_log').textContent = '0';
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tabBtn_' + name).classList.add('active');
+  document.getElementById('panel_' + name).classList.add('active');
+}
+
+// ============================================================
+// STEPS & PROGRESS
+// ============================================================
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    if (i < n) el.className = 'step done';
+    else if (i === n) el.className = 'step active';
+    else el.className = 'step';
+  }
+}
+function updateProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('processingDesc').textContent = label;
+}
+function updateStats() {
+  const mapping = MAPPING_CONFIG[state.dataType] || [];
+  const mapped = mapping.filter(m => m.status === 'mapped').length;
+  const blank = mapping.filter(m => m.status === 'blank').length;
+  const srcFieldCount = (MAPPING_CONFIG[state.dataType] || []).filter(m => m.status !== 'blank').length + (SRC_ONLY_FIELDS[state.dataType] || []).length;
+  document.getElementById('statSrcFields').textContent = srcFieldCount > 0 ? srcFieldCount : '-';
+  document.getElementById('statMapped').textContent = mapped;
+  document.getElementById('statBlank').textContent = blank;
+}
+
+// ============================================================
+// PROCESSING OVERLAY
+// ============================================================
+function showProcessing(title, desc) {
+  document.getElementById('processingTitle').textContent = title;
+  document.getElementById('processingDesc').textContent = desc;
+  document.getElementById('processingOverlay').classList.add('show');
+}
+function hideProcessing() {
+  document.getElementById('processingOverlay').classList.remove('show');
+}
+
+// ============================================================
+// RESET
+// ============================================================
+function resetAll() {
+  clearFile();
+  state.resultData = null;
+  state.verifyErrors = [];
+  document.getElementById('downloadCard').style.display = 'none';
+  setStep(1);
+  updateProgress(0, '等待开始');
+  document.getElementById('statSrcFields').textContent = '-';
+  document.getElementById('statTotal').textContent = '-';
+  document.getElementById('statErrors').textContent = '-';
+  document.getElementById('statErrorItem').className = 'stat-item';
+  document.getElementById('verifyContent').innerHTML = '<div class="alert alert-info"><span class="alert-icon">ℹ️</span><span>请先完成映射匹配，验证结果将在此处显示。</span></div>';
+  document.getElementById('tabCount_verify').textContent = '0';
+  clearLog();
+  log('info', '已重置，等待上传新文件...');
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+<!-- ===== FOOTER ===== -->
+<footer class="site-footer">
+  <a class="footer-back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" href="#">
+    &#8593; 回到顶部
+  </a>
+  <div class="footer-copyright">
+    <span class="footer-brand">Pando Forest</span> 内部专用<br>
+    Copyright &copy; 2026 潘多森林（深圳）传媒有限公司
+  </div>
+</footer>
+
+</body>
+</html>
